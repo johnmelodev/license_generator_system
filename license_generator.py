@@ -1,24 +1,23 @@
-# Como vender acesso ao meu software.
-# 1. Desenvolvendo o softare
-# 2. Fornecer o download do software
-# 3. Solicitar informações de acesso(licença)
+# How to sell access to my software.
+# 1. Developing the software
+# 2. Provide the software download
+# 3. Request access information (license)
 import random
 import os
-# ASEF1-SDF4D-SDFS4-SFSA3-F3AF3
-fonte = 'ABCDEFDHIJKLMNOPQRSTUVWXYZ1234567890'
-licencas_geradas = 0
-quantas_licencas = int(input('Quantas licenças devem ser geradas?'))
-licencas = []
 
-while licencas_geradas <= quantas_licencas:
-    licenca = f'{random.choices(fonte,k=5)}-{random.choices(fonte,k=5)}-{random.choices(fonte,k=5)}-{random.choices(fonte,k=5)}-{random.choices(fonte,k=5)}'
+source = 'ABCDEFDHIJKLMNOPQRSTUVWXYZ1234567890'
+generated_licenses = 0
+how_many_licenses = int(input('How many licenses should be generated?'))
+licenses = []
 
-    licenca_limpa = licenca.replace('[', '').replace(
-        "'", "").replace(',', '').replace(']', '').replace(' ', '')
-    licencas_geradas += 1
-    licencas.append(licenca_limpa)
+while generated_licenses <= how_many_licenses:
+    license = f'{random.choices(source, k=5)}-{random.choices(source, k=5)}-{random.choices(source, k=5)}-{random.choices(source, k=5)}-{random.choices(source, k=5)}'
 
-    with open('licenças.txt', 'w', newline='') as arquivo:
-        arquivo.writelines(os.linesep.join(licencas))
+    clean_license = license.replace('[', '').replace("'", "").replace(',', '').replace(']', '').replace(' ', '')
+    generated_licenses += 1
+    licenses.append(clean_license)
 
-    print('Finalizado')
+    with open('licenses.txt', 'w', newline='') as file:
+        file.writelines(os.linesep.join(licenses))
+
+    print('Finished')
