@@ -1,97 +1,87 @@
+# app.py
 from flask import Flask, jsonify, request, make_response
-from estrutura_banco_de_dados import Usuario, Licenca, app, db
+from database_structure import User, License, app, db
 import json
 import jwt
 from datetime import datetime, timedelta
 from functools import wraps
 
-
-def token_obrigatorio(f):
+def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
-        # Verificar se um token foi enviado
+        # Check if a token was sent
         if 'x-access-token' in request.headers:
             token = request.headers['x-access-token']
         if not token:
-            return jsonify({'mensagem': 'Token não foi incluído!'}, 401)
-        # Se temos um token, validar acesso consultando o BD
+            return jsonify({'message': 'Token not included!'}, 401)
+        # If we have a token, validate access by consulting bd.
         try:
-            resultado = jwt.decode(
-                token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            autor = Usuario.query.filter_by(
-                id_autor=resultado['id_autor']).first()
+            result = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            author = User.query.filter_by(id_author=result['id_author']).first()
         except:
-            return jsonify({'mensagem': 'Token é inválido'}, 401)
+            return jsonify({'message': 'Token is invalid'}, 401)
         return f(*args, **kwargs)
     return decorated
 
-
 @app.route("/")
-@token_obrigatorio
-def obter_todas_chaves():
-    licencas = Licenca.query.all()
-    lista_licencas = []
+@token_required
+def get_all_keys():
+    licenses = License.query.all()
+    license_list = []
 
-    for licenca in licencas:
-        dados = {}
-        dados['licenca'] = licenca.licenca
-        lista_licencas.append(dados)
+    for license in licenses:
+        data = {}
+        data['license'] = license.license
+        license_list.append(data)
 
-    return jsonify({'Licenças': lista_licencas})
+    return jsonify({'Licenses': license_list})
 
+@app.route("/keys/<string:key>", methods=['GET'])
+def validate_key(key):
+    license = License.query.filter_by(license=key).first()
+    if license:
+        return jsonify({'access': True})
+    return jsonify({'access': False})
 
-@app.route("/chaves/<string:chave>", methods=['GET'])
-def validar_chave(chave):
-    licenca = Licenca.query.filter_by(licenca=chave).first()
-    if licenca:
-        return jsonify({'acesso': True})
-    return jsonify({'acesso': False})
+# Add a new key
+@app.route("/keys", methods=['POST'])
+@token_required
+def add_access_key():
+    data = request.get_json()
 
-
-# Adicionar uma nova chave
-@app.route("/chaves", methods=['POST'])
-@token_obrigatorio
-def adicionar_chave_de_acesso():
-    dados = request.get_json()
-
-    nova_licenca = Licenca(licenca=dados['licenca'])
-    db.session.add(nova_licenca)
+    new_license = License(license=data['license'])
+    db.session.add(new_license)
     db.session.commit()
 
-    return jsonify({'mensagem': 'Nova licença registrada com sucesso!'})
+    return jsonify({'message': 'New license registered successfully!'})
 
-# Excluir uma chave existente
-
-
-@app.route('/chaves/<string:chave>', methods=['DELETE'])
-@token_obrigatorio
-def excluir_licenca(chave):
+# Delete an existing key
+@app.route('/keys/<string:key>', methods=['DELETE'])
+@token_required
+def delete_license(key):
     try:
-        licenca = Licenca.query.filter_by(licenca=chave).first()
-        if licenca:
-            db.session.delete(licenca)
+        license = License.query.filter_by(license=key).first()
+        if license:
+            db.session.delete(license)
             db.session.commit()
-        return jsonify({'message': 'Chave excluída com sucesso'})
-
-    except Exception as erro:
-        print(erro)
-        return jsonify(f'Não foi possível excluir a chave {chave}')
-
+        return jsonify({'message': 'Key deleted successfully'})
+    except Exception as error:
+        print(error)
+        return jsonify(f'Could not delete the key {key}')
 
 @app.route('/login')
 def login():
     auth = request.authorization
     if not auth or not auth.username or not auth.password:
-        return make_response('Login inválido', 401, {'WWW-Authenticate': 'Basic realm="Login obrigatório"'})
-    usuario = Usuario.query.filter_by(nome=auth.username).first()
-    if not usuario:
-        return make_response('Login inválido', 401, {'WWW-Authenticate': 'Basic realm="Login obrigatório"'})
-    if auth.password == usuario.senha:
-        token = jwt.encode({'id_autor': usuario.id_autor, 'exp': datetime.utcnow(
-        ) + timedelta(minutes=30)}, app.config['SECRET_KEY'])
+        return make_response('Invalid login', 401, {'WWW-Authenticate': 'Basic realm="Login required"'})
+    user = User.query.filter_by(name=auth.username).first()
+    if not user:
+        return make_response('Invalid login', 401, {'WWW-Authenticate': 'Basic realm="Login required"'})
+    if auth.password == user.password:
+        token = jwt.encode({'id_author': user.id_author, 'exp': datetime.utcnow() + timedelta(minutes=30)}, app.config['SECRET_KEY'])
         return jsonify({'token': token})
-    return make_response('Login inválido', 401, {'WWW-Authenticate': 'Basic realm="Login obrigatório"'})
+    return make_response('Invalid login', 401, {'WWW-Authenticate': 'Basic realm="Login required"'})
 
-
-app.run(port=5000, host='0.0.0.0', debug=False)
+if __name__ == "__main__":
+    app.run(port=5000, host='0.0.0.0', debug=False)
